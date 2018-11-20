@@ -11,20 +11,19 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import Constants._
 
 class SingleCycleUnitTester(c: CPU, rawfile: String) extends PeekPokeTester(c) {
-  def load_memory(filename: String, c: CPU) = {
-    val buf = ByteBuffer.wrap(Files.readAllBytes(Paths.get(filename)))
-    buf.order(ByteOrder.LITTLE_ENDIAN) // WHY WOULD THIS DEFAULT TO BIG ENDIAN???
-    var word = 0
-    while(buf.hasRemaining()) {
-      val data = buf.getInt()
-      poke(c.memory.io.dataPort.writedata, data)
-      poke(c.memory.io.dataPort.address, word << 2) // Doing words, not bytes
-      poke(c.memory.io.dataPort.memwrite, true)
-      step(1)
-      word += 1
-    }
+
+  val buf = ByteBuffer.wrap(Files.readAllBytes(Paths.get(rawfile)))
+  buf.order(ByteOrder.LITTLE_ENDIAN) // WHY WOULD THIS DEFAULT TO BIG ENDIAN???
+  var word = 0
+  while(buf.hasRemaining()) {
+    val data = buf.getInt()
+    poke(c.memory.io.dataPort.writedata, data)
+    poke(c.memory.io.dataPort.address, word << 2) // Doing words, not bytes
+    poke(c.memory.io.dataPort.memwrite, true)
+    step(1)
+    word += 1
   }
-  load_memory(rawfile, c)
+
   poke(c.memory.io.instPort.address, 0)
   expect(c.memory.io.instPort.instruction, 0x00500333)
 
