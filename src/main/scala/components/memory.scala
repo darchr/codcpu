@@ -37,7 +37,6 @@ class SimpleAsyncMemory extends Module {
   }
   when (io.dataPort.memwrite) {
     //assert(io.dataPort.address(32,21) == 0.U)
-    print(p"Writing, $io")
     memory.write(io.dataPort.address, io.dataPort.writedata)
   }
 }

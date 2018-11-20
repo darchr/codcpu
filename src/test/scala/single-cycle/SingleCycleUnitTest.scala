@@ -3,7 +3,7 @@
 package CODCPU
 
 import java.nio.file.{Files, Paths}
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 
 import chisel3._
 import chisel3.iotesters
@@ -11,22 +11,20 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import Constants._
 
 class SingleCycleUnitTester(c: CPU, rawfile: String) extends PeekPokeTester(c) {
-  def load_memory(filename: String, memory: SimpleAsyncMemory) = {
+  def load_memory(filename: String, c: CPU) = {
     val buf = ByteBuffer.wrap(Files.readAllBytes(Paths.get(filename)))
-    val lim = buf.limit()
-    println(s"found $lim bytes")
+    buf.order(ByteOrder.LITTLE_ENDIAN) // WHY WOULD THIS DEFAULT TO BIG ENDIAN???
     var word = 0
     while(buf.hasRemaining()) {
       val data = buf.getInt()
-      println(s"$data")
-      //poke(memory.io.dataPort.writedata, data)
-      //poke(memory.io.dataPort.address, word << 2) // Doing words, not bytes
-      //poke(memory.io.dataPort.memwrite, 1)
+      poke(c.memory.io.dataPort.writedata, data)
+      poke(c.memory.io.dataPort.address, word << 2) // Doing words, not bytes
+      poke(c.memory.io.dataPort.memwrite, true)
       step(1)
       word += 1
     }
   }
-  load_memory(rawfile, c.memory)
+  load_memory(rawfile, c)
   poke(c.memory.io.instPort.address, 0)
   expect(c.memory.io.instPort.instruction, 0x00500333)
 
