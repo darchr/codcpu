@@ -44,3 +44,14 @@
 ## Documentation to add
 
 - [ ] All structures in components need to have details about their I/O
+
+# Some notes on improving testing
+
+I've tried to use the `loadMemoryFromFile` function for debugging.
+However, the file must be specified when the memory is created, which is causing me a bit of a headache since I can't specify the file when I'm creating the test.
+Also, this requires using the master on Chisel, which I would rather not do.
+
+I also can't seem to poke a register in the register file, which isn't shocking, but it's a little annoying.
+
+So, I think the solution is to do a setup phase where I "load" the memory with the data from the file, and I also update the registers to be the right values.
+Then, I can "reset" the CPU by setting the PC back to 0 and then running.

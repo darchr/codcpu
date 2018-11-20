@@ -3,10 +3,44 @@
 package CODCPU
 
 import chisel3._
-
-import Common.{MemPortIo}
-
+import Common.MemPortIo
 import Constants._
+
+
+class SimpleAsyncMemory extends Module {
+  val io = IO(new Bundle {
+    val instPort = new Bundle {
+      // Note: This masks off the upper 10 bits of the address since the memory
+      // is only 4 MB
+      val address     = Input(UInt(32.W))
+      val instruction = Output(UInt(32.W))
+    }
+    val dataPort = new Bundle {
+      val address   = Input(UInt(32.W))
+      val writedata = Input(UInt(32.W))
+      val memread   = Input(Bool())
+      val memwrite  = Input(Bool())
+
+      val readdata  = Output(UInt(32.W))
+    }
+  })
+  io.dataPort.readdata := DontCare
+
+  // Stores 32b words. Total size: 4 MB (2^20 4B words)
+  val memory = Mem(1 << 20, UInt(32.W))
+
+  io.instPort.instruction := memory.read(io.instPort.address(20,0))
+
+  when (io.dataPort.memread) {
+    //assert(io.dataPort.address(32,21) == 0.U) // Data should never be above 4MB
+    io.dataPort.readdata := memory.read(io.dataPort.address)
+  }
+  when (io.dataPort.memwrite) {
+    //assert(io.dataPort.address(32,21) == 0.U)
+    print(p"Writing, $io")
+    memory.write(io.dataPort.address, io.dataPort.writedata)
+  }
+}
 
 /**
  * Contains the instructions.

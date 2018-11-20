@@ -27,27 +27,23 @@ class CPU extends Module {
   io := DontCare
 
   // All of the structures required
-  val pc         = RegInit("h80000000".U)
-  val instMem    = Module(new InstructionMemory())
-  val control    = Module(new Control())
-  val registers  = Module(new RegisterFile())
-  val aluControl = Module(new ALUControl())
-  val alu        = Module(new ALU())
-  val immGen     = Module(new ImmediateGenerator())
-  val dataMem    = Module(new DataMemory())
-  val pcPlusFour = Module(new Adder())
-  val branchAdd  = Module(new Adder())
+  val pc         = RegInit(0.U)
+  val control    = Module(new Control)
+  val registers  = Module(new RegisterFile)
+  val aluControl = Module(new ALUControl)
+  val alu        = Module(new ALU)
+  val immGen     = Module(new ImmediateGenerator)
+  val pcPlusFour = Module(new Adder)
+  val branchAdd  = Module(new Adder)
+  val memory     = Module(new SimpleAsyncMemory)
   val (cycleCount, _) = Counter(true.B, 1 << 30)
 
-  io.imem <> instMem.io.memport
-  io.dmem <> dataMem.io.memport
-
-  instMem.io.address := pc
+  memory.io.instPort.address := pc
 
   pcPlusFour.io.inputx := pc
   pcPlusFour.io.inputy := 4.U
 
-  val instruction = instMem.io.instruction
+  val instruction = memory.io.instPort.instruction
   val opcode = instruction(6,0)
 
   control.io.opcode := opcode
@@ -70,12 +66,12 @@ class CPU extends Module {
   alu.io.inputy := alu_inputy
   alu.io.operation := aluControl.io.operation
 
-  dataMem.io.address   := alu.io.result
-  dataMem.io.writedata := registers.io.readdata2
-  dataMem.io.memread   := control.io.memread
-  dataMem.io.memwrite  := control.io.memwrite
+  memory.io.dataPort.address   := alu.io.result
+  memory.io.dataPort.writedata := registers.io.readdata2
+  memory.io.dataPort.memread   := control.io.memread
+  memory.io.dataPort.memwrite  := control.io.memwrite
 
-  val write_data = Mux(control.io.memtoreg, dataMem.io.readdata, alu.io.result)
+  val write_data = Mux(control.io.memtoreg, memory.io.dataPort.readdata, alu.io.result)
   registers.io.writedata := write_data
 
   branchAdd.io.inputx := pc
@@ -91,7 +87,7 @@ class CPU extends Module {
          registers.io.readreg1,
          registers.io.readreg2,
          registers.io.writereg,
-         dataMem.io.address,
+         memory.io.dataPort.address,
          next_pc
          )
   printf("                 r1=%x, r2=%x, imm=%x, alu=%x, data=%x, write=%x\n",
@@ -99,7 +95,7 @@ class CPU extends Module {
          registers.io.readdata2,
          imm,
          alu.io.result,
-         dataMem.io.readdata,
+         memory.io.dataPort.readdata,
          registers.io.writedata
          )
 
